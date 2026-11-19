@@ -41,3 +41,24 @@ document.getElementById("copy").onclick = async () => {
     out.textContent = "❌ " + e.message;
   }
 };
+
+document.getElementById("ask").onclick = async () => {
+  const out = document.getElementById("askMsg");
+  out.textContent = "A pensar…";
+  try {
+    const r = await fetch("/api/ai/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: document.getElementById("question").value }),
+    });
+    const j = await r.json();
+    if (j.ok) {
+      document.getElementById("answer").value = j.text;
+      out.textContent = "✅ Resposta abaixo (modelo " + j.model + "). Reveja/edite antes de copiar.";
+    } else {
+      out.textContent = "❌ " + j.error;
+    }
+  } catch (e) {
+    out.textContent = "❌ " + e.message;
+  }
+};
