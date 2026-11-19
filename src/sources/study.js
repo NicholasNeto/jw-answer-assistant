@@ -1,9 +1,10 @@
 const { fetchOfficial, isOfficialUrl } = require("./official");
 const { stripTags } = require("./wol");
+const { parseMidweekArticle } = require("./midweek");
 
 // Só documentos do WOL (/wol/d/...).
 function isStudyUrl(value) {
-  return isOfficialUrl(value) && new URL(value).hostname === "wol.jw.org" && /\/wol\/d\//.test(value);
+  return isOfficialUrl(value) && new URL(value).hostname === "wol.jw.org" && /\/wol\/(?:d|pc)\//.test(value);
 }
 
 // Parser puro: artigo de estudo -> perguntas com os respetivos parágrafos.
@@ -48,8 +49,11 @@ async function loadStudyArticle(url, { fetchImpl } = {}) {
   const key = new URL(url).pathname;
   if (cache.has(key)) return cache.get(key);
   const { html } = await fetchOfficial(url, { fetchImpl });
-  const article = { ...parseStudyArticle(html), url: new URL(url).origin + key };
-  if (!article.questions.length) throw new Error("Não encontrei perguntas de estudo neste documento.");
+  let article = { type: "study", ...parseStudyArticle(html), url: new URL(url).origin + key };
+  if (!article.questions.length) {
+    article = { type: "midweek", ...parseMidweekArticle(html, url), url: new URL(url).origin + key };
+  }
+  if (!article.questions.length) throw new Error("Não encontrei perguntas neste documento.");
   cache.set(key, article);
   return article;
 }

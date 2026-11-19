@@ -60,7 +60,7 @@ app.post("/api/answer", async (req, res) => {
 app.post("/api/study/load", async (req, res) => {
   try {
     const a = await loadStudyArticle(String((req.body && req.body.url) || ""));
-    res.json({ ok: true, title: a.title, week: a.week, url: a.url, questions: a.questions.map(({ number, text, paragraphs }) => ({ number, text, hasParagraph: paragraphs.length > 0 })) });
+    res.json({ ok: true, type: a.type, title: a.title, week: a.week, url: a.url, studyLink: a.studyLink || null, questions: a.questions.map(({ number, section, text, paragraphs, refs }) => ({ number, section: section || "", text, hasParagraph: a.type === "midweek" ? refs.length > 0 : paragraphs.length > 0 })) });
   } catch (e) {
     res.status(400).json({ ok: false, error: e.message });
   }

@@ -1,5 +1,6 @@
 const ai = require("./ai/provider");
 const { searchOfficial } = require("./sources/wol");
+const { resolveReferences } = require("./sources/midweek");
 
 const MAX_CHARS_PER_SOURCE = 1500;
 
@@ -47,7 +48,34 @@ function buildStudyPrompt(q, article) {
   ].join("\n");
 }
 
+function buildMidweekPrompt(q, article, sources) {
+  const blocks = sources.map((s, i) => `[${i + 1}] ${s.label}\n${s.text}`).join("\n\n");
+  return [
+    "Responda à pergunta em português, de forma breve e com as palavras do estudante, usando EXCLUSIVAMENTE os textos de referência abaixo.",
+    "Não use conhecimento próprio nem acrescente informação que não esteja nesses textos.",
+    'Se os textos não bastarem para responder, diga apenas: "As referências não respondem claramente à pergunta."',
+    "",
+    `Secção: ${q.section}`,
+    `Pergunta: ${q.text}`,
+    "",
+    "Textos de referência:",
+    blocks,
+  ].join("\n");
+}
+
+async function answerMidweekQuestion(article, number, deps = {}) {
+  const q = article.questions.find((x) => x.number === number);
+  if (!q) throw new Error(`Pergunta ${number} não encontrada.`);
+  const sources = await resolveReferences(q, deps);
+  if (!sources.length) {
+    throw new Error("Esta pergunta não tem referências que eu consiga ler (pode ser pessoal). Responda manualmente.");
+  }
+  const { text, model } = await (deps.generate || ai.generate)(buildMidweekPrompt(q, article, sources));
+  return { text, model, question: q.text, paragraphs: sources.map((s) => `${s.label}: ${s.text}`), source: { title: article.title, url: article.url } };
+}
+
 async function answerStudyQuestion(article, number, deps = {}) {
+  if (article.type === "midweek") return answerMidweekQuestion(article, number, deps);
   const q = article.questions.find((x) => x.number === number);
   if (!q) throw new Error(`Pergunta ${number} não encontrada.`);
   if (!q.paragraphs.length) throw new Error("Esta pergunta não tem parágrafo associado.");
@@ -55,4 +83,4 @@ async function answerStudyQuestion(article, number, deps = {}) {
   return { text, model, question: q.text, paragraphs: q.paragraphs, source: { title: article.title, url: article.url } };
 }
 
-module.exports = { answerFromOfficialSources, buildPrompt, buildStudyPrompt, answerStudyQuestion };
+module.exports = { buildMidweekPrompt, answerFromOfficialSources, buildPrompt, buildStudyPrompt, answerStudyQuestion };

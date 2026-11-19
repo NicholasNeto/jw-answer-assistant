@@ -87,10 +87,16 @@ document.getElementById("loadStudy").onclick = async () => {
   studyUrl = document.getElementById("studyUrl").value;
   msg.textContent = "✅ " + j.questions.length + " perguntas";
   document.getElementById("studyTitle").textContent = j.title + " — " + j.week;
+  if (j.studyLink) {
+    const b = document.createElement("button");
+    b.textContent = "Carregar o estudo bíblico de congregação desta semana";
+    b.onclick = () => { document.getElementById("studyUrl").value = j.studyLink; document.getElementById("loadStudy").click(); };
+    list.appendChild(b);
+  }
   for (const q of j.questions) {
     const li = document.createElement("li");
     li.value = q.number || 0;
-    li.append(q.text + " ");
+    li.append((q.section ? "[" + q.section + "] " : "") + q.text + " ");
     const b = document.createElement("button");
     b.textContent = "Preparar resposta";
     b.disabled = !q.hasParagraph;
