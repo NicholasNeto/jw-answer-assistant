@@ -6,8 +6,10 @@ if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 
 const express = require("express");
 const { getDeviceStatus } = require("./android/status");
+const { copyToClipboard } = require("./clipboard");
 
 const app = express();
+app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.get("/api/device/status", async (_req, res) => {
@@ -15,6 +17,15 @@ app.get("/api/device/status", async (_req, res) => {
     res.json(await getDeviceStatus());
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/clipboard", async (req, res) => {
+  try {
+    await copyToClipboard(req.body && req.body.text);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
   }
 });
 

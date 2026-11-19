@@ -26,3 +26,18 @@ async function refresh() {
 document.getElementById("refresh").onclick = refresh;
 refresh();
 setInterval(refresh, 5000);
+
+document.getElementById("copy").onclick = async () => {
+  const out = document.getElementById("copyMsg");
+  try {
+    const r = await fetch("/api/clipboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: document.getElementById("answer").value }),
+    });
+    const j = await r.json();
+    out.textContent = j.ok ? "✅ Copiado. Cole no Scrcpy com Ctrl+V." : "❌ " + j.error;
+  } catch (e) {
+    out.textContent = "❌ " + e.message;
+  }
+};

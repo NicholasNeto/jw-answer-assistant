@@ -14,4 +14,5 @@ Node.js 20.12+ (testado em 22), ADB e (mais tarde) Scrcpy.
 - `npm run clipboard` – prova de conceito do clipboard (index.js)
 
 ## API
+- `POST /api/clipboard` `{text}` – copia para o clipboard do macOS (pbcopy).
 - `GET /api/device/status` – ADB, dispositivo autorizado, JW Library instalada/em primeiro plano.
