@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <title>JW Answer Assistant</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    li { margin: .4rem 0; list-style: none; }
+    .ok::before { content: "✅ "; } .no::before { content: "❌ "; }
+    #msg { font-weight: 600; margin-top: 1rem; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>JW Answer Assistant</h1>
+  <h2>Estado do Android</h2>
+  <ul id="list"></ul>
+  <p id="msg">A verificar…</p>
+  <button id="refresh">Atualizar</button> <small>atualiza a cada 5 s</small>
+  <script src="app.js"></script>
+</body>
+</html>
