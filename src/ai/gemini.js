@@ -1,3 +1,4 @@
+const { AppError, classifyHttpError } = require("./errors");
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 const API_REVISION = "2026-05-20";
 
@@ -17,26 +18,31 @@ function extractText(interaction) {
 
 async function generate(prompt, { fetchImpl = fetch } = {}) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não definida no .env.");
+  if (!key) throw new AppError("no_key");
   const model = process.env.GEMINI_MODEL || "gemini-4-hydrogen";
 
-  const res = await fetchImpl(ENDPOINT, {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": key,
-      "Content-Type": "application/json",
-      "Api-Revision": API_REVISION,
-    },
-    body: JSON.stringify({ model, input: prompt }),
-    signal: AbortSignal.timeout(120000),
-  });
+  let res;
+  try {
+    res = await fetchImpl(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "x-goog-api-key": key,
+        "Content-Type": "application/json",
+        "Api-Revision": API_REVISION,
+      },
+      body: JSON.stringify({ model, input: prompt }),
+      signal: AbortSignal.timeout(120000),
+    });
+  } catch (e) {
+    if (e.name === "TimeoutError" || e.name === "AbortError") throw new AppError("timeout");
+    throw new AppError("unavailable", { detail: e.message });
+  }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = (body.error && body.error.message) || `HTTP ${res.status}`;
-    throw new Error(`Gemini: ${msg}`);
+    throw classifyHttpError(res.status, body);
   }
   const text = extractText(body);
-  if (!text) throw new Error("Gemini devolveu uma resposta vazia.");
+  if (!text) throw new AppError("empty");
   return { text, model };
 }
 

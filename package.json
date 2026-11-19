@@ -4,7 +4,10 @@
   "description": "",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node src/server.js --real",
+    "start:mock": "node src/server.js --mock",
+    "dev": "node --watch src/server.js --mock",
+    "dev:real": "node --watch src/server.js --real",
     "clipboard": "node index.js",
     "test": "node --test test/*.test.js"
   },

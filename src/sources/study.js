@@ -7,6 +7,12 @@ function isStudyUrl(value) {
   return isOfficialUrl(value) && new URL(value).hostname === "wol.jw.org" && /\/wol\/(?:d|pc)\//.test(value);
 }
 
+function studyLabel(q) {
+  const n = q.parNums;
+  const par = !n.length ? "" : n.length === 1 ? ` · § ${n[0]}` : ` · §§ ${n[0]}-${n[n.length - 1]}`;
+  return (q.number ? `Pergunta ${q.number}` : "Pergunta") + par;
+}
+
 // Parser puro: artigo de estudo -> perguntas com os respetivos parágrafos.
 function parseStudyArticle(html) {
   const title = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [])[1];
@@ -18,12 +24,13 @@ function parseStudyArticle(html) {
     const raw = m[2];
     const num = (raw.match(/<strong>\s*(\d+)\.\s*<\/strong>/) || [])[1];
     const text = stripTags(raw.replace(/<strong>\s*\d+\.\s*<\/strong>/, ""));
-    questions.push({ pid: m[1], number: num ? Number(num) : null, text, paragraphs: [], scriptures: [] });
+    questions.push({ pid: m[1], number: num ? Number(num) : null, text, paragraphs: [], parNums: [], scriptures: [] });
   }
   const byPid = new Map(questions.map((q) => [q.pid, q]));
 
   const pre = /<p[^>]*data-rel-pid="\[([\d,\s]+)\]"[^>]*>([\s\S]*?)<\/p>/g;
   for (const m of html.matchAll(pre)) {
+    const pn = (m[2].match(/data-pnum="(\d+)"/) || [])[1];
     const body = m[2].replace(/<span class="parNum"[\s\S]*?<\/span>/, "");
     const text = stripTags(body);
     const refs = [...body.matchAll(/<a [^>]*class="b"[^>]*>([\s\S]*?)<\/a>/g)].map((r) => stripTags(r[1]));
@@ -31,6 +38,7 @@ function parseStudyArticle(html) {
       const q = byPid.get(pid);
       if (q) {
         q.paragraphs.push(text);
+        if (pn) q.parNums.push(Number(pn));
         q.scriptures.push(...refs);
       }
     }
@@ -38,7 +46,7 @@ function parseStudyArticle(html) {
   return {
     title: title ? stripTags(title) : "",
     week: week ? stripTags(week) : "",
-    questions: questions.filter((q) => q.text),
+    questions: questions.filter((q) => q.text).map((q) => ({ ...q, label: studyLabel(q) })),
   };
 }
 

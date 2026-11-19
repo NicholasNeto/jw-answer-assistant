@@ -12,6 +12,7 @@
   </style>
 </head>
 <body>
+  <div id="modeBanner" hidden style="background:#fff3cd;padding:6px;border:1px solid #e0c36a">🧪 <strong>Modo MOCK</strong>: as respostas são simuladas (sem gastar a IA). Para respostas reais use <code>npm start</code>.</div>
   <h1>JW Answer Assistant</h1>
   <h2>Estado do Android</h2>
   <ul id="list"></ul>
@@ -23,7 +24,7 @@
   <p><button id="loadStudy">Carregar artigo</button> <span id="studyMsg"></span></p>
   <p id="studyTitle"></p>
   <p><button id="genAll" hidden>Preparar todas</button></p>
-  <ol id="studyList"></ol>
+  <ul id="studyList" style="list-style:none;padding-left:0"></ul>
   <details id="paraBox" hidden><summary>Texto-base usado</summary><p id="para"></p></details>
   <h2>Perguntar (com fontes oficiais)</h2>
   <p><small>Pesquisa em wol.jw.org e o Gemini responde só com esses trechos. Reveja sempre as fontes.</small></p>

@@ -1,4 +1,5 @@
 const ai = require("./ai/provider");
+const { AppError } = require("./ai/errors");
 const { searchOfficial } = require("./sources/wol");
 const { resolveReferences } = require("./sources/midweek");
 
@@ -68,7 +69,7 @@ async function answerMidweekQuestion(article, number, deps = {}) {
   if (!q) throw new Error(`Pergunta ${number} não encontrada.`);
   const sources = await resolveReferences(q, deps);
   if (!sources.length) {
-    throw new Error("Esta pergunta não tem referências que eu consiga ler (pode ser pessoal). Responda manualmente.");
+    throw new AppError("no_source");
   }
   const { text, model } = await (deps.generate || ai.generate)(buildMidweekPrompt(q, article, sources));
   return { text, model, question: q.text, paragraphs: sources.map((s) => `${s.label}: ${s.text}`), source: { title: article.title, url: article.url } };
@@ -78,7 +79,7 @@ async function answerStudyQuestion(article, number, deps = {}) {
   if (article.type === "midweek") return answerMidweekQuestion(article, number, deps);
   const q = article.questions.find((x) => x.number === number);
   if (!q) throw new Error(`Pergunta ${number} não encontrada.`);
-  if (!q.paragraphs.length) throw new Error("Esta pergunta não tem parágrafo associado.");
+  if (!q.paragraphs.length) throw new AppError("no_source");
   const { text, model } = await (deps.generate || ai.generate)(buildStudyPrompt(q, article));
   return { text, model, question: q.text, paragraphs: q.paragraphs, source: { title: article.title, url: article.url } };
 }

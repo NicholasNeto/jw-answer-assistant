@@ -33,6 +33,14 @@ function parseMidweekArticle(html, baseUrl = "https://wol.jw.org") {
       questions.push({ number: questions.length + 1, section, text: stripTags(m[1]), refs, paragraphs: [] });
     }
   }
+  const perItem = {};
+  for (const q of questions) perItem[q.section] = (perItem[q.section] || 0) + 1;
+  const seen = {};
+  for (const q of questions) {
+    const item = (q.section.match(/^(\d+)\./) || [])[1];
+    seen[q.section] = (seen[q.section] || 0) + 1;
+    q.label = (item ? `Item ${item}` : "Pergunta") + (perItem[q.section] > 1 ? ` · pergunta ${seen[q.section]}` : "");
+  }
   return { title: stripTags(title.split("—")[0].split("&mdash;")[0]), week: stripTags(week), questions, studyLink };
 }
 

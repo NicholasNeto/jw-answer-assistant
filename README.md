@@ -9,7 +9,11 @@ Node.js 20.12+ (testado em 22), ADB e (mais tarde) Scrcpy.
 3. `npm start` e abra http://localhost:3000
 
 ## Scripts
-- `npm start` – servidor local + UI (estado do dispositivo)
+- `npm start` – servidor com a IA **real** (Gemini, gasta quota)
+- `npm run start:mock` – servidor com IA **simulada** (sem custo; aparece o aviso "Modo MOCK")
+- `npm run dev` – mock + recarrega ao editar código (desenvolvimento da UI/automação)
+- `npm run dev:real` – IA real + recarrega ao editar
+- No mock, `MOCK_ERROR=quota npm run dev` simula erros (`quota`, `auth`, `timeout`, `unavailable`, `empty`)
 - `npm test` – testes dos parsers (sem dispositivo)
 - `npm run clipboard` – prova de conceito do clipboard (index.js)
 

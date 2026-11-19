@@ -86,9 +86,15 @@ const post = (url, body) =>
 function render(q) {
   const a = answers.get(q.number);
   const el = a.el;
-  const labels = { pending: "", running: "⏳ a gerar…", done: "✅ pronta", error: "❌ " + (a.error || "") };
+  const blocked = !q.hasParagraph || (a.status === "error" && !a.retryable);
+  const labels = {
+    pending: q.hasParagraph ? "" : "🚫 Sem texto-base: responda manualmente.",
+    running: "⏳ a gerar…",
+    done: "✅ pronta",
+    error: (a.retryable ? "⚠️ " : "🚫 ") + (a.error || "") + (a.retryable && a.retryAfterSec ? ` (tente daqui a ~${a.retryAfterSec}s)` : ""),
+  };
   el.status.textContent = labels[a.status];
-  el.gen.disabled = !q.hasParagraph || a.status === "running";
+  el.gen.disabled = blocked || a.status === "running";
   el.gen.textContent = a.status === "done" ? "Refazer" : "Preparar resposta";
   el.copy.hidden = el.show.hidden = a.status !== "done";
   el.text.hidden = a.status !== "done";
@@ -103,17 +109,18 @@ async function generate(q, force) {
   try {
     const j = await post("/api/study/answer", { url: studyUrl, number: q.number });
     if (j.ok) Object.assign(a, { status: "done", text: j.text, paragraphs: j.paragraphs });
-    else Object.assign(a, { status: "error", error: j.error });
+    else Object.assign(a, { status: "error", error: j.error, code: j.code, retryable: j.retryable !== false, retryAfterSec: j.retryAfterSec });
   } catch (e) {
-    Object.assign(a, { status: "error", error: e.message });
+    Object.assign(a, { status: "error", error: "Não foi possível contactar a app. Verifique se o servidor está a correr.", code: "network", retryable: true });
   }
   render(q);
+  return a;
 }
 
 function showAnswer(q) {
   const a = answers.get(q.number);
   document.getElementById("answer").value = a.el.text.value;
-  document.getElementById("para").textContent = (a.paragraphs || []).join("\n\n");
+  document.getElementById("para").textContent = q.label + "\n\n" + (a.paragraphs || []).join("\n\n");
   document.getElementById("paraBox").hidden = false;
 }
 
@@ -129,7 +136,12 @@ async function generateAll() {
   const todo = studyQuestions.filter((q) => q.hasParagraph && answers.get(q.number).status !== "done");
   for (let i = 0; i < todo.length; i++) {
     msg.textContent = `A preparar ${i + 1}/${todo.length}… (pode usar as já prontas enquanto espera)`;
-    await generate(todo[i]);
+    const a = await generate(todo[i]);
+    if (a && a.status === "error" && ["quota", "auth", "no_key", "network"].includes(a.code)) {
+      msg.textContent = "⏸️ Parei a fila: " + a.error + " As restantes ficam por gerar; use 'Preparar todas' de novo mais tarde.";
+      running = false;
+      return;
+    }
   }
   msg.textContent = "✅ Concluído. Reveja cada resposta antes de copiar.";
   running = false;
@@ -156,8 +168,9 @@ document.getElementById("loadStudy").onclick = async () => {
   }
   for (const q of j.questions) {
     const li = document.createElement("li");
-    li.value = q.number || 0;
-    li.append((q.section ? "[" + q.section + "] " : "") + q.text + " ");
+    const tag = document.createElement("strong");
+    tag.textContent = q.label + ": ";
+    li.append(tag, (q.section ? "[" + q.section + "] " : "") + q.text + " ");
     const el = {};
     el.gen = document.createElement("button");
     el.gen.onclick = () => generate(q, true);
@@ -178,3 +191,8 @@ document.getElementById("loadStudy").onclick = async () => {
 };
 
 document.getElementById("genAll").onclick = generateAll;
+
+fetch("/api/config").then((r) => r.json()).then((c) => {
+  const b = document.getElementById("modeBanner");
+  b.hidden = c.aiProvider !== "mock";
+}).catch(() => {});

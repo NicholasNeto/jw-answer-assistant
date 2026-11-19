@@ -1,6 +1,7 @@
 // Camada de abstração: o resto da app só usa generate(prompt).
 const providers = {
   gemini: () => require("./gemini"),
+  mock: () => require("./mock"),
 };
 
 function getProvider() {
@@ -13,4 +14,8 @@ async function generate(prompt) {
   return getProvider().generate(prompt);
 }
 
-module.exports = { generate };
+function providerName() {
+  return (process.env.AI_PROVIDER || "gemini").toLowerCase();
+}
+
+module.exports = { generate, providerName };

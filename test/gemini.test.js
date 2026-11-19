@@ -14,7 +14,7 @@ test("generate: sem chave dá erro claro; erro HTTP propagado", async () => {
   await assert.rejects(generate("x"), /GEMINI_API_KEY/);
   process.env.GEMINI_API_KEY = "k";
   const fake = async () => ({ ok: false, status: 429, json: async () => ({ error: { message: "quota" } }) });
-  await assert.rejects(generate("x", { fetchImpl: fake }), /quota/);
+  await assert.rejects(generate("x", { fetchImpl: fake }), /limite/i);
   const ok = async () => ({ ok: true, json: async () => ({ output_text: "resp" }) });
   assert.deepStrictEqual(await generate("x", { fetchImpl: ok }), { text: "resp", model: "gemini-4-hydrogen" });
 });
