@@ -28,7 +28,7 @@ async function generate(prompt, { fetchImpl = fetch } = {}) {
       "Api-Revision": API_REVISION,
     },
     body: JSON.stringify({ model, input: prompt }),
-    signal: AbortSignal.timeout(60000),
+    signal: AbortSignal.timeout(120000),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {

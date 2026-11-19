@@ -17,10 +17,18 @@
   <ul id="list"></ul>
   <p id="msg">A verificar…</p>
   <button id="refresh">Atualizar</button> <small>atualiza a cada 5 s</small>
-  <h2>Perguntar ao Gemini</h2>
-  <p><small>⚠️ Etapa de teste: a resposta ainda NÃO é fundamentada em fontes oficiais (isso vem na etapa seguinte).</small></p>
+  <h2>Estudo (A Sentinela)</h2>
+  <p><small>Cole o link do artigo de estudo em wol.jw.org. Cada resposta é baseada só no parágrafo da pergunta.</small></p>
+  <input id="studyUrl" style="width:100%" placeholder="https://wol.jw.org/pt-PT/wol/d/...">
+  <p><button id="loadStudy">Carregar artigo</button> <span id="studyMsg"></span></p>
+  <p id="studyTitle"></p>
+  <ol id="studyList"></ol>
+  <details id="paraBox" hidden><summary>Parágrafo usado</summary><p id="para"></p></details>
+  <h2>Perguntar (com fontes oficiais)</h2>
+  <p><small>Pesquisa em wol.jw.org e o Gemini responde só com esses trechos. Reveja sempre as fontes.</small></p>
   <textarea id="question" rows="3" style="width:100%" placeholder="Escreva a pergunta"></textarea>
   <p><button id="ask">Perguntar</button> <span id="askMsg"></span></p>
+  <ol id="sources"></ol>
   <h2>Inserir resposta</h2>
   <p><small>1) Selecione a caixa no JW Library (janela do Scrcpy). 2) Clique em Copiar. 3) Na janela do Scrcpy prima Ctrl+V.</small></p>
   <textarea id="answer" rows="5" style="width:100%"></textarea>

@@ -8,6 +8,8 @@ const express = require("express");
 const { getDeviceStatus } = require("./android/status");
 const { copyToClipboard } = require("./clipboard");
 const ai = require("./ai/provider");
+const { answerFromOfficialSources, answerStudyQuestion } = require("./answer");
+const { loadStudyArticle } = require("./sources/study");
 
 const app = express();
 app.use(express.json({ limit: "100kb" }));
@@ -40,6 +42,36 @@ app.post("/api/ai/ask", async (req, res) => {
     res.json({ ok: true, text, model });
   } catch (e) {
     res.status(502).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/api/answer", async (req, res) => {
+  const q = req.body && typeof req.body.question === "string" ? req.body.question.trim() : "";
+  if (!q || q.length > 2000) {
+    return res.status(400).json({ ok: false, error: "Pergunta vazia ou demasiado longa (máx. 2000)." });
+  }
+  try {
+    res.json({ ok: true, ...(await answerFromOfficialSources(q)) });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/api/study/load", async (req, res) => {
+  try {
+    const a = await loadStudyArticle(String((req.body && req.body.url) || ""));
+    res.json({ ok: true, title: a.title, week: a.week, url: a.url, questions: a.questions.map(({ number, text, paragraphs }) => ({ number, text, hasParagraph: paragraphs.length > 0 })) });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/api/study/answer", async (req, res) => {
+  try {
+    const a = await loadStudyArticle(String((req.body && req.body.url) || ""));
+    res.json({ ok: true, ...(await answerStudyQuestion(a, Number(req.body.number))) });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
   }
 });
 
