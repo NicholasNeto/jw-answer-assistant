@@ -76,17 +76,78 @@ document.getElementById("ask").onclick = async () => {
 };
 
 let studyUrl = "";
+let studyQuestions = [];
+const answers = new Map(); // número -> {status, text, paragraphs, error, el}
+let running = false;
+
+const post = (url, body) =>
+  fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+
+function render(q) {
+  const a = answers.get(q.number);
+  const el = a.el;
+  const labels = { pending: "", running: "⏳ a gerar…", done: "✅ pronta", error: "❌ " + (a.error || "") };
+  el.status.textContent = labels[a.status];
+  el.gen.disabled = !q.hasParagraph || a.status === "running";
+  el.gen.textContent = a.status === "done" ? "Refazer" : "Preparar resposta";
+  el.copy.hidden = el.show.hidden = a.status !== "done";
+  el.text.hidden = a.status !== "done";
+  if (a.status === "done" && el.text.value !== a.text && document.activeElement !== el.text) el.text.value = a.text;
+}
+
+async function generate(q, force) {
+  const a = answers.get(q.number);
+  if (a.status === "running" || (a.status === "done" && !force)) return;
+  a.status = "running";
+  render(q);
+  try {
+    const j = await post("/api/study/answer", { url: studyUrl, number: q.number });
+    if (j.ok) Object.assign(a, { status: "done", text: j.text, paragraphs: j.paragraphs });
+    else Object.assign(a, { status: "error", error: j.error });
+  } catch (e) {
+    Object.assign(a, { status: "error", error: e.message });
+  }
+  render(q);
+}
+
+function showAnswer(q) {
+  const a = answers.get(q.number);
+  document.getElementById("answer").value = a.el.text.value;
+  document.getElementById("para").textContent = (a.paragraphs || []).join("\n\n");
+  document.getElementById("paraBox").hidden = false;
+}
+
+async function copyText(text, out) {
+  const j = await post("/api/clipboard", { text });
+  out.textContent = j.ok ? "✅ copiado" : "❌ " + j.error;
+}
+
+async function generateAll() {
+  if (running) return;
+  running = true;
+  const msg = document.getElementById("studyMsg");
+  const todo = studyQuestions.filter((q) => q.hasParagraph && answers.get(q.number).status !== "done");
+  for (let i = 0; i < todo.length; i++) {
+    msg.textContent = `A preparar ${i + 1}/${todo.length}… (pode usar as já prontas enquanto espera)`;
+    await generate(todo[i]);
+  }
+  msg.textContent = "✅ Concluído. Reveja cada resposta antes de copiar.";
+  running = false;
+}
+
 document.getElementById("loadStudy").onclick = async () => {
   const msg = document.getElementById("studyMsg");
   const list = document.getElementById("studyList");
   msg.textContent = "A carregar…";
   list.replaceChildren();
-  const r = await fetch("/api/study/load", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: document.getElementById("studyUrl").value }) });
-  const j = await r.json();
+  answers.clear();
+  const j = await post("/api/study/load", { url: document.getElementById("studyUrl").value });
   if (!j.ok) { msg.textContent = "❌ " + j.error; return; }
   studyUrl = document.getElementById("studyUrl").value;
+  studyQuestions = j.questions;
   msg.textContent = "✅ " + j.questions.length + " perguntas";
   document.getElementById("studyTitle").textContent = j.title + " — " + j.week;
+  document.getElementById("genAll").hidden = false;
   if (j.studyLink) {
     const b = document.createElement("button");
     b.textContent = "Carregar o estudo bíblico de congregação desta semana";
@@ -97,30 +158,23 @@ document.getElementById("loadStudy").onclick = async () => {
     const li = document.createElement("li");
     li.value = q.number || 0;
     li.append((q.section ? "[" + q.section + "] " : "") + q.text + " ");
-    const b = document.createElement("button");
-    b.textContent = "Preparar resposta";
-    b.disabled = !q.hasParagraph;
-    b.onclick = () => answerStudy(q.number, b);
-    li.appendChild(b);
+    const el = {};
+    el.gen = document.createElement("button");
+    el.gen.onclick = () => generate(q, true);
+    el.status = document.createElement("span");
+    el.text = document.createElement("textarea");
+    el.text.rows = 4; el.text.style.width = "100%";
+    el.copy = document.createElement("button");
+    el.copy.textContent = "Copiar";
+    el.copy.onclick = () => copyText(el.text.value, el.status);
+    el.show = document.createElement("button");
+    el.show.textContent = "Ver com o texto-base";
+    el.show.onclick = () => showAnswer(q);
+    li.append(el.gen, " ", el.copy, " ", el.show, " ", el.status, el.text);
+    answers.set(q.number, { status: "pending", el });
+    render(q);
     list.appendChild(li);
   }
 };
 
-async function answerStudy(number, btn) {
-  const msg = document.getElementById("studyMsg");
-  btn.disabled = true;
-  msg.textContent = "A preparar a pergunta " + number + " (pode demorar até 1–2 min)…";
-  try {
-    const r = await fetch("/api/study/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: studyUrl, number }) });
-    const j = await r.json();
-    if (!j.ok) { msg.textContent = "❌ " + j.error; return; }
-    document.getElementById("answer").value = j.text;
-    document.getElementById("para").textContent = j.paragraphs.join("\n\n");
-    document.getElementById("paraBox").hidden = false;
-    msg.textContent = "✅ Pergunta " + number + " pronta abaixo. Reveja com o parágrafo antes de copiar.";
-  } catch (e) {
-    msg.textContent = "❌ " + e.message;
-  } finally {
-    btn.disabled = false;
-  }
-}
+document.getElementById("genAll").onclick = generateAll;
