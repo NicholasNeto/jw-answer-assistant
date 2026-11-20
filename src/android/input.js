@@ -20,7 +20,7 @@ async function insertText(text, { serial = process.env.ADB_SERIAL, run = runAdb 
   if (!text || !text.trim()) return fail("empty", "Não há texto para inserir.");
   const sh = (...args) => run(["shell", ...args], { serial });
 
-  const ime = await sh("ime", "list", "-s");
+  const ime = await sh("ime", "list", "-a", "-s");
   if (!ime.ok) return fail("adb", "Não consegui falar com o telemóvel (ligado e autorizado?).");
 
   if (ime.stdout.includes(ADB_KEYBOARD_IME)) {
