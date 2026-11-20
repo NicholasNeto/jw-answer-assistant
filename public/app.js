@@ -101,6 +101,10 @@ function render(q) {
   if (a.status === "done" && el.text.value !== a.text && document.activeElement !== el.text) el.text.value = a.text;
 }
 
+function saveAnswer(number, text, model) {
+  fetch("/api/answers", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: studyUrl, number, text, model }) }).catch(() => {});
+}
+
 async function generate(q, force) {
   const a = answers.get(q.number);
   if (a.status === "running" || (a.status === "done" && !force)) return;
@@ -108,7 +112,10 @@ async function generate(q, force) {
   render(q);
   try {
     const j = await post("/api/study/answer", { url: studyUrl, number: q.number });
-    if (j.ok) Object.assign(a, { status: "done", text: j.text, paragraphs: j.paragraphs });
+    if (j.ok) {
+      Object.assign(a, { status: "done", text: j.text, paragraphs: j.paragraphs });
+      saveAnswer(q.number, j.text, j.model);
+    }
     else Object.assign(a, { status: "error", error: j.error, code: j.code, retryable: j.retryable !== false, retryAfterSec: j.retryAfterSec });
   } catch (e) {
     Object.assign(a, { status: "error", error: "Não foi possível contactar a app. Verifique se o servidor está a correr.", code: "network", retryable: true });
@@ -160,6 +167,8 @@ document.getElementById("loadStudy").onclick = async () => {
   msg.textContent = "✅ " + j.questions.length + " perguntas";
   document.getElementById("studyTitle").textContent = j.title + " — " + j.week;
   document.getElementById("genAll").hidden = false;
+  document.getElementById("flowBox").hidden = false;
+  const saved = await fetch("/api/answers?url=" + encodeURIComponent(studyUrl)).then((r) => r.json()).catch(() => ({}));
   if (j.studyLink) {
     const b = document.createElement("button");
     b.textContent = "Carregar o estudo bíblico de congregação desta semana";
@@ -177,6 +186,7 @@ document.getElementById("loadStudy").onclick = async () => {
     el.status = document.createElement("span");
     el.text = document.createElement("textarea");
     el.text.rows = 4; el.text.style.width = "100%";
+    el.text.onchange = () => { const a = answers.get(q.number); a.text = el.text.value; saveAnswer(q.number, el.text.value, a.model); };
     el.copy = document.createElement("button");
     el.copy.textContent = "Copiar";
     el.copy.onclick = () => copyText(el.text.value, el.status);
@@ -184,7 +194,8 @@ document.getElementById("loadStudy").onclick = async () => {
     el.show.textContent = "Ver com o texto-base";
     el.show.onclick = () => showAnswer(q);
     li.append(el.gen, " ", el.copy, " ", el.show, " ", el.status, el.text);
-    answers.set(q.number, { status: "pending", el });
+    const sv = saved.answers && saved.answers[q.number];
+    answers.set(q.number, sv ? { status: "done", text: sv.text, model: sv.model, paragraphs: [], el } : { status: "pending", el });
     render(q);
     list.appendChild(li);
   }
@@ -194,5 +205,34 @@ document.getElementById("genAll").onclick = generateAll;
 
 fetch("/api/config").then((r) => r.json()).then((c) => {
   const b = document.getElementById("modeBanner");
-  b.hidden = c.aiProvider !== "mock";
+  b.hidden = c.aiProvider !== "mock" && !c.deviceMock;
+  b.textContent = (c.aiProvider === "mock" ? "🧪 IA simulada (sem custo). " : "") + (c.deviceMock ? "📱 Telemóvel simulado. " : "") + "Respostas reais: npm start.";
 }).catch(() => {});
+
+// ---- Pergunta aberta no telemóvel ----
+let detected = null;
+document.getElementById("detect").onclick = async () => {
+  const out = document.getElementById("flowMsg");
+  const box = document.getElementById("flowAnswer");
+  out.textContent = "A ler o ecrã do telemóvel…";
+  detected = null;
+  const r = await fetch("/api/flow/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: studyUrl }) });
+  const j = await r.json().catch(() => ({ ok: false, error: "Erro inesperado." }));
+  if (!j.ok) { out.textContent = "❌ " + j.error; return; }
+  if (!j.found) { out.textContent = "⚠️ " + j.message; return; }
+  detected = j;
+  box.value = j.answer || "";
+  out.textContent = `📍 ${j.label} (${Math.round(j.score * 100)}%)` + (j.ambiguous ? " ⚠️ parecida com outra, confirme" : "") +
+    (j.answer ? "" : " — ainda não há resposta preparada: use 'Preparar resposta' nessa pergunta.") +
+    (j.focusedEditField ? "" : " Toque primeiro na caixa de resposta no telemóvel.");
+  document.getElementById("flowQuestion").textContent = j.question;
+};
+
+document.getElementById("insert").onclick = async () => {
+  const out = document.getElementById("flowMsg");
+  const text = document.getElementById("flowAnswer").value;
+  out.textContent = "A inserir no telemóvel…";
+  const r = await fetch("/api/device/insert", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+  const j = await r.json().catch(() => ({ ok: false, error: "Erro inesperado." }));
+  out.textContent = j.ok ? "✅ Inserido (" + j.method + "). Reveja no telemóvel antes de guardar." : "❌ " + j.error;
+};

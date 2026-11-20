@@ -26,6 +26,14 @@
   <p><button id="genAll" hidden>Preparar todas</button></p>
   <ul id="studyList" style="list-style:none;padding-left:0"></ul>
   <details id="paraBox" hidden><summary>Texto-base usado</summary><p id="para"></p></details>
+  <div id="flowBox" hidden>
+    <h2>Pergunta aberta no telemóvel</h2>
+    <p><small>Abra a pergunta no JW Library e toque na caixa de resposta. Depois clique em Detetar.</small></p>
+    <p><button id="detect">Detetar pergunta aberta</button> <span id="flowMsg"></span></p>
+    <p id="flowQuestion"></p>
+    <textarea id="flowAnswer" rows="4" style="width:100%"></textarea>
+    <p><button id="insert">Inserir no JW Library</button></p>
+  </div>
   <h2>Perguntar (com fontes oficiais)</h2>
   <p><small>Pesquisa em wol.jw.org e o Gemini responde só com esses trechos. Reveja sempre as fontes.</small></p>
   <textarea id="question" rows="3" style="width:100%" placeholder="Escreva a pergunta"></textarea>

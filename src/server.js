@@ -4,6 +4,7 @@ const fs = require("fs");
 const envFile = path.join(__dirname, "..", ".env");
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 if (process.argv.includes("--mock")) process.env.AI_PROVIDER = "mock";
+if (process.argv.includes("--mock-device")) process.env.DEVICE_MOCK = "1";
 if (process.argv.includes("--real")) process.env.AI_PROVIDER = "gemini";
 
 const express = require("express");
@@ -11,6 +12,9 @@ const { getDeviceStatus } = require("./android/status");
 const { copyToClipboard } = require("./clipboard");
 const ai = require("./ai/provider");
 const { answerFromOfficialSources, answerStudyQuestion } = require("./answer");
+const device = require("./android/device");
+const { matchQuestion } = require("./match");
+const store = require("./store");
 const { toPayload } = require("./ai/errors");
 const { loadStudyArticle } = require("./sources/study");
 
@@ -18,7 +22,57 @@ const app = express();
 app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
-app.get("/api/config", (_req, res) => res.json({ aiProvider: ai.providerName() }));
+app.get("/api/config", (_req, res) => res.json({ aiProvider: ai.providerName(), deviceMock: device.isMock() }));
+
+app.get("/api/answers", (req, res) => {
+  try {
+    const all = store.getAnswers(String(req.query.url || ""));
+    const mockAi = ai.providerName() === "mock";
+    // respostas simuladas nunca são devolvidas fora do modo mock
+    res.json({ ok: true, answers: Object.fromEntries(Object.entries(all).filter(([, v]) => mockAi || v.model !== "mock")) });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.put("/api/answers", (req, res) => {
+  const { url, number, text, model } = req.body || {};
+  if (typeof text !== "string" || text.length > 5000 || !Number.isInteger(number)) return res.status(400).json({ ok: false, error: "Dados inválidos." });
+  try {
+    store.saveAnswer(String(url), number, text, model);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/api/device/insert", async (req, res) => {
+  const text = req.body && req.body.text;
+  if (typeof text !== "string" || text.length > 5000) return res.status(400).json({ ok: false, error: "Texto inválido (máx. 5000)." });
+  const r = await device.insertText(text);
+  res.status(r.ok ? 200 : 502).json(r);
+});
+
+app.post("/api/flow/detect", async (req, res) => {
+  try {
+    const url = String((req.body && req.body.url) || "");
+    const a = await loadStudyArticle(url);
+    const screen = await device.readScreen({ questions: a.questions });
+    if (!screen.ok) return res.status(502).json(screen);
+    const m = matchQuestion(screen.texts, a.questions);
+    if (!m.found) return res.json({ ok: true, found: false, message: "Não reconheci nenhuma pergunta deste artigo no ecrã. Abra a pergunta no JW Library." });
+    const q = a.questions.find((x) => x.number === m.number);
+    const saved = store.getAnswers(url)[m.number];
+    const mockAi = ai.providerName() === "mock";
+    res.json({
+      ok: true, found: true, number: m.number, label: q.label, question: q.text, score: m.score, ambiguous: m.ambiguous,
+      focusedEditField: screen.focusedEditField,
+      answer: saved && (mockAi || saved.model !== "mock") ? saved.text : null,
+    });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
 
 app.get("/api/device/status", async (_req, res) => {
   try {
