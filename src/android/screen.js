@@ -21,8 +21,10 @@ function parseUiDump(xml) {
     const text = attr("text").trim();
     const desc = attr("content-desc").trim();
     const cls = attr("class");
+    const b = attr("bounds").match(/\[(\d+),(\d+)\]\[(\d+),(\d+)\]/);
     nodes.push({
       text: text || desc,
+      rect: b ? { x1: +b[1], y1: +b[2], x2: +b[3], y2: +b[4] } : null,
       editable: /EditText/.test(cls) || attr("editable") === "true",
       focused: attr("focused") === "true",
       bounds: attr("bounds"),
@@ -30,7 +32,7 @@ function parseUiDump(xml) {
   }
   const texts = nodes.filter((n) => n.text).map((n) => n.text);
   const fields = nodes.filter((n) => n.editable);
-  return { texts, hasEditField: fields.length > 0, focusedEditField: fields.some((f) => f.focused) };
+  return { texts, nodes, hasEditField: fields.length > 0, focusedEditField: fields.some((f) => f.focused) };
 }
 
 // Lê o ecrã do telemóvel (sem captura de imagem nem IA). Devolve { ok, texts, ... } ou { ok:false, error }.

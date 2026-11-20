@@ -54,3 +54,28 @@ test("store: guarda e lê respostas por artigo", () => {
   assert.equal(store.getAnswers("https://wol.jw.org/pt/wol/d/r1/x/123")[2].text, "resp");
   assert.deepEqual(store.getAnswers("https://wol.jw.org/pt/wol/d/r1/x/999"), {});
 });
+
+test("alvo: acha a caixa da pergunta certa e recusa se a pergunta não está visível", async () => {
+  const { locateField, insertForQuestion } = require("../src/android/target");
+  const r = (y) => ({ x1: 0, y1: y, x2: 100, y2: y + 50 });
+  const nodes = [
+    { text: "Quem são os dez homens hoje na pregação?", rect: r(0) },
+    { text: "", editable: true, rect: r(100) },
+    { text: "Como Jeová cuida dos seus servos fiéis hoje?", rect: r(200) },
+    { text: "", editable: true, rect: r(300) },
+  ];
+  assert.deepEqual(locateField(nodes, "Como Jeová cuida dos seus servos fiéis hoje?"), { ok: true, x: 50, y: 325 });
+  assert.equal(locateField(nodes, "Tema totalmente diferente sem relação nenhuma").code, "question_not_visible");
+
+  const calls = [];
+  const ok = await insertForQuestion("Como Jeová cuida dos seus servos fiéis hoje?", "resp", {
+    readScreen: async () => ({ ok: true, nodes }),
+    insertText: async () => ({ ok: true, method: "adbkeyboard" }),
+    run: async (a) => (calls.push(a.join(" ")), { ok: true }),
+    wait: async () => {},
+  });
+  assert.ok(ok.ok && ok.targeted);
+  assert.equal(calls[0], "shell input tap 50 325");
+  const no = await insertForQuestion("Pergunta que não aparece no ecrã atual nenhum", "x", { readScreen: async () => ({ ok: true, nodes }), insertText: async () => assert.fail("não devia inserir") });
+  assert.equal(no.code, "question_not_visible");
+});

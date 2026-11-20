@@ -25,3 +25,11 @@ test("isStudyUrl", () => {
   assert.ok(!isStudyUrl("https://wol.jw.org/pt/wol/h/r5/lp-t"));
   assert.ok(!isStudyUrl("https://evil.com/wol/d/x"));
 });
+
+test("estudo: pergunta com intervalo '5-6.' mantém número e etiqueta", () => {
+  const h = '<p data-pid="9" class="qu"><strong>5-6.</strong> Como é?</p><p data-rel-pid="[9]"><span class="parNum" data-pnum="8">8</span> x</p>';
+  const q = parseStudyArticle(h).questions[0];
+  assert.equal(q.number, 5);
+  assert.equal(q.label, "Perguntas 5-6 · § 8");
+  assert.equal(q.text, "Como é?");
+});

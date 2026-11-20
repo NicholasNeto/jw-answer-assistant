@@ -49,8 +49,27 @@ app.put("/api/answers", (req, res) => {
 app.post("/api/device/insert", async (req, res) => {
   const text = req.body && req.body.text;
   if (typeof text !== "string" || text.length > 5000) return res.status(400).json({ ok: false, error: "Texto inválido (máx. 5000)." });
-  const r = await device.insertText(text);
+  const { url, number } = req.body;
+  let r;
+  if (url && number != null) {
+    try {
+      const a = await loadStudyArticle(String(url));
+      const q = a.questions.find((x) => x.number === Number(number));
+      if (!q) return res.status(400).json({ ok: false, error: "Pergunta não encontrada." });
+      r = await device.insertForQuestion(q.text, text);
+    } catch (e) {
+      return res.status(400).json({ ok: false, error: e.message });
+    }
+  } else {
+    r = await device.insertText(text);
+  }
   res.status(r.ok ? 200 : 502).json(r);
+});
+
+app.get("/api/device/screen", async (_req, res) => {
+  const s = await device.readScreen({ questions: [] });
+  if (!s.ok) return res.status(502).json(s);
+  res.json({ ok: true, texts: (s.texts || []).slice(0, 200), nodes: (s.nodes || []).filter((n) => n.text || n.editable).slice(0, 200) });
 });
 
 app.post("/api/flow/detect", async (req, res) => {

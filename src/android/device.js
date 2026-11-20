@@ -1,4 +1,5 @@
 // Fachada do dispositivo: real (adb) ou simulada (--mock-device / DEVICE_MOCK=1), para desenvolver sem telemóvel.
+const { insertForQuestion } = require("./target");
 const real = { readScreen: require("./screen").readScreen, insertText: require("./input").insertText };
 
 const inserted = [];
@@ -17,10 +18,16 @@ const mock = {
   },
 };
 
+async function insertForQuestionFacade(question, text) {
+  if (isMock()) return { ...(await mock.insertText(text)), targeted: true };
+  return insertForQuestion(question, text, real);
+}
+
 const isMock = () => process.env.DEVICE_MOCK === "1";
 module.exports = {
   readScreen: (o) => (isMock() ? mock : real).readScreen(o),
   insertText: (t, o) => (isMock() ? mock : real).insertText(t, o),
+  insertForQuestion: insertForQuestionFacade,
   isMock,
   mockInserted: inserted,
 };

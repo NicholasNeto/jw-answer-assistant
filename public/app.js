@@ -194,8 +194,8 @@ document.getElementById("loadStudy").onclick = async () => {
     el.ins.textContent = "Inserir no telemóvel";
     el.ins.onclick = async () => {
       el.status.textContent = "A inserir…";
-      const j = await post("/api/device/insert", { text: el.text.value }).catch(() => ({ ok: false, error: "Erro inesperado." }));
-      el.status.textContent = j.ok ? "✅ inserida (" + j.method + "). Reveja no telemóvel." : "❌ " + j.error;
+      const j = await post("/api/device/insert", { text: el.text.value, url: studyUrl, number: q.number }).catch(() => ({ ok: false, error: "Erro inesperado." }));
+      el.status.textContent = j.ok ? "✅ inserida na caixa desta pergunta. Reveja no telemóvel." : "⚠️ " + j.error;
     };
     el.show = document.createElement("button");
     el.show.textContent = "Ver com o texto-base";
@@ -242,4 +242,9 @@ document.getElementById("insert").onclick = async () => {
   const r = await fetch("/api/device/insert", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
   const j = await r.json().catch(() => ({ ok: false, error: "Erro inesperado." }));
   out.textContent = j.ok ? "✅ Inserido (" + j.method + "). Reveja no telemóvel antes de guardar." : "❌ " + j.error;
+};
+
+document.getElementById("diag").onclick = async () => {
+  const j = await fetch("/api/device/screen").then((r) => r.json()).catch((e) => ({ ok: false, error: e.message }));
+  document.getElementById("diagOut").textContent = JSON.stringify(j, null, 1);
 };

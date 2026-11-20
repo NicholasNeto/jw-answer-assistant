@@ -10,7 +10,8 @@ function isStudyUrl(value) {
 function studyLabel(q) {
   const n = q.parNums;
   const par = !n.length ? "" : n.length === 1 ? ` · § ${n[0]}` : ` · §§ ${n[0]}-${n[n.length - 1]}`;
-  return (q.number ? `Pergunta ${q.number}` : "Pergunta") + par;
+  const num = q.numberEnd ? `Perguntas ${q.number}-${q.numberEnd}` : q.number ? `Pergunta ${q.number}` : "Pergunta";
+  return num + par;
 }
 
 // Parser puro: artigo de estudo -> perguntas com os respetivos parágrafos.
@@ -22,9 +23,10 @@ function parseStudyArticle(html) {
   const re = /<p[^>]*data-pid="(\d+)"[^>]*class="qu"[^>]*>([\s\S]*?)<\/p>/g;
   for (const m of html.matchAll(re)) {
     const raw = m[2];
-    const num = (raw.match(/<strong>\s*(\d+)\.\s*<\/strong>/) || [])[1];
-    const text = stripTags(raw.replace(/<strong>\s*\d+\.\s*<\/strong>/, ""));
-    questions.push({ pid: m[1], number: num ? Number(num) : null, text, paragraphs: [], parNums: [], scriptures: [] });
+    const numRe = /<strong>\s*(\d+)(?:\s*[-–,]\s*(\d+))?\.\s*<\/strong>/;
+    const nm = raw.match(numRe);
+    const text = stripTags(raw.replace(numRe, ""));
+    questions.push({ pid: m[1], number: nm ? Number(nm[1]) : null, numberEnd: nm && nm[2] ? Number(nm[2]) : null, text, paragraphs: [], parNums: [], scriptures: [] });
   }
   const byPid = new Map(questions.map((q) => [q.pid, q]));
 
