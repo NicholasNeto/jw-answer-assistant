@@ -96,7 +96,7 @@ function render(q) {
   el.status.textContent = labels[a.status];
   el.gen.disabled = blocked || a.status === "running";
   el.gen.textContent = a.status === "done" ? "Refazer" : "Preparar resposta";
-  el.copy.hidden = el.show.hidden = a.status !== "done";
+  el.copy.hidden = el.show.hidden = el.ins.hidden = a.status !== "done";
   el.text.hidden = a.status !== "done";
   if (a.status === "done" && el.text.value !== a.text && document.activeElement !== el.text) el.text.value = a.text;
 }
@@ -190,10 +190,17 @@ document.getElementById("loadStudy").onclick = async () => {
     el.copy = document.createElement("button");
     el.copy.textContent = "Copiar";
     el.copy.onclick = () => copyText(el.text.value, el.status);
+    el.ins = document.createElement("button");
+    el.ins.textContent = "Inserir no telemóvel";
+    el.ins.onclick = async () => {
+      el.status.textContent = "A inserir…";
+      const j = await post("/api/device/insert", { text: el.text.value }).catch(() => ({ ok: false, error: "Erro inesperado." }));
+      el.status.textContent = j.ok ? "✅ inserida (" + j.method + "). Reveja no telemóvel." : "❌ " + j.error;
+    };
     el.show = document.createElement("button");
     el.show.textContent = "Ver com o texto-base";
     el.show.onclick = () => showAnswer(q);
-    li.append(el.gen, " ", el.copy, " ", el.show, " ", el.status, el.text);
+    li.append(el.gen, " ", el.ins, " ", el.copy, " ", el.show, " ", el.status, el.text);
     const sv = saved.answers && saved.answers[q.number];
     answers.set(q.number, sv ? { status: "done", text: sv.text, model: sv.model, paragraphs: [], el } : { status: "pending", el });
     render(q);
