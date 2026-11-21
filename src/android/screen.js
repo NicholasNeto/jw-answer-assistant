@@ -28,20 +28,38 @@ function parseUiDump(xml) {
       editable: /EditText/.test(cls) || attr("editable") === "true",
       focused: attr("focused") === "true",
       bounds: attr("bounds"),
+      cls,
+      id: attr("resource-id"),
+      clickable: attr("clickable") === "true",
+      focusable: attr("focusable") === "true",
     });
   }
   const texts = nodes.filter((n) => n.text).map((n) => n.text);
   const fields = nodes.filter((n) => n.editable);
-  return { texts, nodes, hasEditField: fields.length > 0, focusedEditField: fields.some((f) => f.focused) };
+  const visibleTexts = nodes.filter((n) => n.text && n.rect && n.rect.x2 > n.rect.x1 && n.rect.y2 > n.rect.y1).map((n) => n.text);
+  return { texts, visibleTexts, nodes, hasEditField: fields.length > 0, focusedEditField: fields.some((f) => f.focused) };
 }
 
 // Lê o ecrã do telemóvel (sem captura de imagem nem IA). Devolve { ok, texts, ... } ou { ok:false, error }.
-async function readScreen({ serial = process.env.ADB_SERIAL, run = runAdb } = {}) {
-  const r = await run(["exec-out", "uiautomator", "dump", "/dev/tty"], { serial, timeout: 15000 });
+async function dumpXml(run, serial) {
+  const r = await run(["exec-out", "uiautomator", "dump", "/dev/tty"], { serial, timeout: 20000 });
   if (!r.ok) return { ok: false, error: r.error === "ADB_NOT_FOUND" ? "ADB não encontrado." : "Não consegui ler o ecrã do telemóvel (ligado e autorizado?)." };
   const xml = r.stdout.slice(r.stdout.indexOf("<?xml") >= 0 ? r.stdout.indexOf("<?xml") : 0);
   if (!xml.includes("<node")) return { ok: false, error: "O telemóvel não devolveu o conteúdo do ecrã." };
-  return { ok: true, ...parseUiDump(xml) };
+  return { ok: true, xml };
+}
+
+// Lê o ecrã do telemóvel (sem captura de imagem nem IA). A WebView do JW Library só expõe o conteúdo
+// depois de a primeira leitura ativar a acessibilidade, por isso lemos uma segunda vez.
+async function readScreen({ serial = process.env.ADB_SERIAL, run = runAdb, wait = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+  let d = await dumpXml(run, serial);
+  if (!d.ok) return d;
+  if (d.xml.includes("android.webkit.WebView")) {
+    await wait(700);
+    const d2 = await dumpXml(run, serial);
+    if (d2.ok) d = d2;
+  }
+  return { ok: true, ...parseUiDump(d.xml) };
 }
 
 module.exports = { parseUiDump, readScreen };

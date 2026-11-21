@@ -69,7 +69,17 @@ app.post("/api/device/insert", async (req, res) => {
 app.get("/api/device/screen", async (_req, res) => {
   const s = await device.readScreen({ questions: [] });
   if (!s.ok) return res.status(502).json(s);
-  res.json({ ok: true, texts: (s.texts || []).slice(0, 200), nodes: (s.nodes || []).filter((n) => n.text || n.editable).slice(0, 200) });
+  const nodes = s.nodes || [];
+  const vis = (n) => n.rect && n.rect.x2 > n.rect.x1 && n.rect.y2 > n.rect.y1;
+  const short = (n, i) => ({ i, text: n.text.slice(0, 60), bounds: n.bounds, cls: n.cls, id: n.id, editable: n.editable, focused: n.focused, clickable: n.clickable });
+  res.json({
+    ok: true,
+    totalNodes: nodes.length,
+    nodesWithBounds: nodes.filter(vis).length,
+    editableFields: nodes.map((n, i) => (n.editable ? short(n, i) : null)).filter(Boolean),
+    visibleNodes: nodes.map((n, i) => (vis(n) && n.text ? short(n, i) : null)).filter(Boolean).slice(0, 150),
+    labels: nodes.map((n, i) => (/sua resposta/i.test(n.text) ? short(n, i) : null)).filter(Boolean).slice(0, 40),
+  });
 });
 
 app.post("/api/flow/detect", async (req, res) => {
@@ -78,7 +88,7 @@ app.post("/api/flow/detect", async (req, res) => {
     const a = await loadStudyArticle(url);
     const screen = await device.readScreen({ questions: a.questions });
     if (!screen.ok) return res.status(502).json(screen);
-    const m = matchQuestion(screen.texts, a.questions);
+    const m = matchQuestion(screen.visibleTexts && screen.visibleTexts.length ? screen.visibleTexts : screen.texts, a.questions);
     if (!m.found) return res.json({ ok: true, found: false, message: "Não reconheci nenhuma pergunta deste artigo no ecrã. Abra a pergunta no JW Library." });
     const q = a.questions.find((x) => x.number === m.number);
     const saved = store.getAnswers(url)[m.number];

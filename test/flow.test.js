@@ -67,6 +67,15 @@ test("alvo: acha a caixa da pergunta certa e recusa se a pergunta não está vis
   assert.deepEqual(locateField(nodes, "Como Jeová cuida dos seus servos fiéis hoje?"), { ok: true, x: 50, y: 325 });
   assert.equal(locateField(nodes, "Tema totalmente diferente sem relação nenhuma").code, "question_not_visible");
 
+  // texto palavra a palavra, como no JW Library; o rótulo "Sua resposta" é ignorado
+  const words = (t) => t.split(" ").map((w) => ({ text: w, rect: r(0) }));
+  const real = [...words("1 . Por que é importante pregar em muitas línguas ?"), { text: "Sua resposta", rect: r(0) }, { text: "", editable: true, rect: r(500) },
+    ...words("LEMBRA o que Jeová fez"), ...words("2 . Quem representa os dez homens hoje ?"), { text: "Sua resposta", rect: r(0) }, { text: "", editable: true, rect: r(900) }];
+  assert.equal(locateField(real, "Por que é importante pregar em muitas línguas?").y, 525);
+  assert.equal(locateField(real, "Quem representa os dez homens hoje?").y, 925);
+  const off = real.map((n) => (n.editable ? { ...n, rect: { x1: 0, y1: 0, x2: 0, y2: 0 } } : n));
+  assert.equal(locateField(off, "Quem representa os dez homens hoje?").code, "field_offscreen");
+
   const calls = [];
   const ok = await insertForQuestion("Como Jeová cuida dos seus servos fiéis hoje?", "resp", {
     readScreen: async () => ({ ok: true, nodes }),
