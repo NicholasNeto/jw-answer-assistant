@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>JW Answer Assistant — mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Tokens (ver docs/ui/DESIGN.md) */
+  :root {
+    --bg: #f5f6f8; --surface: #fff; --border: #e3e6ea; --text: #1c2430; --muted: #667085;
+    --primary: #3b4cca; --primary-weak: #eef0ff;
+    --ok: #1a7f4b; --ok-weak: #e7f6ee; --warn: #9a6700; --warn-weak: #fff4d6;
+    --err: #b42318; --err-weak: #fdecea; --info-weak: #eaf2ff;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px; --s8: 32px;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+  .guide { outline: 1px dashed #e0457b; outline-offset: -1px; }
+
+  /* AppHeader */
+  .header { height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s6); }
+  .brand { font-weight: 700; font-size: 18px; }
+  .chips { display: flex; gap: var(--s2); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 var(--s3);
+    border-radius: 999px; font-size: 13px; font-weight: 600; }
+  .chip.warn { background: var(--warn-weak); color: var(--warn); }
+  .chip.ok { background: var(--ok-weak); color: var(--ok); }
+  .chip.err { background: var(--err-weak); color: var(--err); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  /* Layout: coluna principal + barra lateral */
+  .layout { max-width: 1200px; margin: 0 auto; padding: var(--s6);
+    display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s6); align-items: start; }
+  .main { display: flex; flex-direction: column; gap: var(--s4); }
+  .side { position: sticky; top: var(--s6); display: flex; flex-direction: column; gap: var(--s4); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--s4); }
+  .card h2 { margin: 0 0 var(--s3); font-size: 16px; }
+  .muted { color: var(--muted); font-size: 13px; }
+
+  /* Buttons */
+  .btn { height: 36px; padding: 0 var(--s4); border-radius: var(--radius-sm); border: 1px solid var(--border);
+    background: var(--surface); font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn.ghost { border-color: transparent; color: var(--muted); background: transparent; }
+  .btn { white-space: nowrap; }
+  .btn.sm { height: 30px; padding: 0 var(--s3); font-size: 13px; }
+
+  /* ArticleLoader */
+  .loader { display: flex; gap: var(--s2); margin-top: var(--s3); }
+  .loader input { flex: 1; height: 40px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 var(--s3); font: inherit; }
+  .article-title { margin-top: var(--s3); font-weight: 600; }
+
+  /* QuestionList toolbar */
+  .toolbar { display: flex; align-items: center; justify-content: space-between; }
+  .progress { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; width: 160px; }
+  .progress > div { height: 100%; width: 27%; background: var(--primary); }
+
+  /* QuestionCard */
+  .q { display: flex; flex-direction: column; gap: var(--s3); }
+  .q-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3); }
+  .q-label { font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: .04em; }
+  .q-text { font-weight: 600; margin-top: 2px; }
+  .badge { flex: none; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; }
+  .badge.pending { background: #eef0f3; color: var(--muted); }
+  .badge.loading { background: var(--info-weak); color: var(--primary); }
+  .badge.ready { background: var(--ok-weak); color: var(--ok); }
+  .badge.error { background: var(--err-weak); color: var(--err); }
+  .badge.inserted { background: var(--primary-weak); color: var(--primary); }
+  .answer { width: 100%; min-height: 96px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: var(--s3); font: inherit; resize: vertical; background: #fbfbfc; }
+  .actions { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; }
+  .actions .spacer { flex: 1; }
+  .alert { padding: var(--s3); border-radius: var(--radius-sm); font-size: 14px; }
+  .alert.err { background: var(--err-weak); color: var(--err); }
+  .skeleton { height: 96px; border-radius: var(--radius-sm); background: linear-gradient(90deg,#eef0f3,#f7f8fa,#eef0f3); }
+
+  /* DevicePanel */
+  .check { display: flex; align-items: center; gap: var(--s2); padding: 6px 0; font-size: 14px; }
+  .check .mark { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; color: #fff; }
+  .check .mark.ok { background: var(--ok); } .check .mark.no { background: var(--err); }
+  .open-q { background: var(--primary-weak); border-radius: var(--radius-sm); padding: var(--s3); margin: var(--s3) 0; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .note { position: fixed; right: 16px; bottom: 16px; background: #1c2430; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">JW Answer Assistant</div>
+  <div class="chips">
+    <span class="chip warn"><span class="dot"></span>IA simulada</span>
+    <span class="chip ok"><span class="dot"></span>Telemóvel ligado</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- Coluna principal -->
+  <main class="main">
+
+    <section class="card">
+      <h2>Artigo</h2>
+      <div class="muted">Cole o link do estudo (Sentinela) ou do caderno da reunião em wol.jw.org.</div>
+      <div class="loader">
+        <input value="https://wol.jw.org/pt/wol/d/r5/lp-t/2026562">
+        <button class="btn primary">Carregar artigo</button>
+      </div>
+      <div class="article-title">Pregando as boas novas em “todas as línguas das nações” <span class="muted">· 16-22 de novembro de 2026 · 15 perguntas</span></div>
+    </section>
+
+    <div class="toolbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <strong>Perguntas</strong>
+        <div class="progress"><div></div></div>
+        <span class="muted">4 de 15 prontas</span>
+      </div>
+      <button class="btn">Preparar todas</button>
+    </div>
+
+    <!-- estado: pronta -->
+    <article class="card q">
+      <div class="q-head">
+        <div>
+          <div class="q-label">Pergunta 1 · § 1</div>
+          <div class="q-text">Por que é importante que as boas novas sejam pregadas em muitas línguas? (Romanos 10:13, 14)</div>
+        </div>
+        <span class="badge ready">✓ Pronta</span>
+      </div>
+      <textarea class="answer">Porque, quando a mensagem do Reino é pregada em uma língua que as pessoas entendem, isso permite que a grande multidão invoque o nome de Jeová.</textarea>
+      <div class="actions">
+        <button class="btn primary sm">Inserir no telemóvel</button>
+        <button class="btn sm">Copiar</button>
+        <button class="btn ghost sm">Refazer</button>
+        <span class="spacer"></span>
+        <button class="btn ghost sm">Ver texto-base ▾</button>
+      </div>
+    </article>
+
+    <!-- estado: a gerar -->
+    <article class="card q">
+      <div class="q-head">
+        <div>
+          <div class="q-label">Pergunta 2 · § 2</div>
+          <div class="q-text">O que Zacarias foi inspirado a profetizar?</div>
+        </div>
+        <span class="badge loading">A gerar…</span>
+      </div>
+      <div class="skeleton"></div>
+    </article>
+
+    <!-- estado: erro -->
+    <article class="card q">
+      <div class="q-head">
+        <div>
+          <div class="q-label">Pergunta 3 · § 3</div>
+          <div class="q-text">Quem o “judeu” e os “dez homens” representam hoje?</div>
+        </div>
+        <span class="badge error">Erro</span>
+      </div>
+      <div class="alert err">A IA está com muita procura. Tente de novo dentro de instantes.</div>
+      <div class="actions"><button class="btn sm">Tentar de novo</button></div>
+    </article>
+
+    <!-- estado: pendente -->
+    <article class="card q">
+      <div class="q-head">
+        <div>
+          <div class="q-label">Pergunta 4 · § 4</div>
+          <div class="q-text">O que aconteceu depois que Jesus designou “o escravo fiel e prudente” em 1919?</div>
+        </div>
+        <span class="badge pending">Pendente</span>
+      </div>
+      <div class="actions"><button class="btn primary sm">Preparar resposta</button></div>
+    </article>
+
+    <details class="card">
+      <summary>Ferramentas avançadas (perguntar livremente, clipboard)</summary>
+      <p class="muted">Aqui ficam “Perguntar com fontes oficiais” e “Inserir resposta” antigos, fora do caminho principal.</p>
+    </details>
+  </main>
+
+  <!-- Barra lateral -->
+  <aside class="side">
+    <section class="card">
+      <h2>Telemóvel</h2>
+      <div class="check"><span class="mark ok">✓</span>ADB disponível</div>
+      <div class="check"><span class="mark ok">✓</span>Dispositivo autorizado</div>
+      <div class="check"><span class="mark ok">✓</span>JW Library instalada</div>
+      <div class="check"><span class="mark no">✕</span>JW Library em primeiro plano</div>
+      <div class="muted" style="margin-top:8px">Abra a JW Library no telemóvel.</div>
+      <button class="btn sm" style="margin-top:12px">Atualizar</button>
+    </section>
+
+    <section class="card">
+      <h2>Pergunta aberta no telemóvel</h2>
+      <div class="muted">Deixe a pergunta visível no JW Library e clique em Detetar.</div>
+      <div class="open-q"><div class="q-label">Pergunta 10-11</div><div style="font-size:14px">O que você aprendeu com a experiência de Robert…</div></div>
+      <div class="actions">
+        <button class="btn primary sm">Detetar</button>
+        <button class="btn sm">Inserir resposta</button>
+      </div>
+      <details style="margin-top:12px"><summary>Diagnóstico do ecrã</summary></details>
+    </section>
+  </aside>
+</div>
+
+<div class="note">Mockup estático — espaçamentos em docs/ui/DESIGN.md</div>
+</body>
+</html>
