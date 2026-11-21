@@ -81,12 +81,19 @@ test("alvo: acha a caixa da pergunta certa e recusa se a pergunta não está vis
 
   const calls = [];
   const ok = await insertForQuestion("Como Jeová cuida dos seus servos fiéis hoje?", "resp", {
-    readScreen: async () => ({ ok: true, nodes }),
+    readScreen: async () => ({ ok: true, nodes: [...nodes, { text: "resp", editable: true }] }),
     insertText: async () => ({ ok: true, method: "adbkeyboard" }),
     run: async (a) => (calls.push(a.join(" ")), { ok: true }),
     wait: async () => {},
   });
-  assert.ok(ok.ok && ok.targeted);
+  assert.ok(ok.ok && ok.targeted && ok.verified);
+  const lost = await insertForQuestion("Como Jeová cuida dos seus servos fiéis hoje?", "resp", {
+    readScreen: async () => ({ ok: true, nodes }),
+    insertText: async () => ({ ok: true }),
+    run: async () => ({ ok: true }),
+    wait: async () => {},
+  });
+  assert.equal(lost.code, "not_confirmed");
   assert.equal(calls[0], "shell input tap 50 325");
   const no = await insertForQuestion("Pergunta que não aparece no ecrã atual nenhum", "x", { readScreen: async () => ({ ok: true, nodes }), insertText: async () => assert.fail("não devia inserir") });
   assert.equal(no.code, "question_not_visible");

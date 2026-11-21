@@ -16,7 +16,7 @@ function fail(code, error) {
 
 // Insere texto no campo focado do telemóvel.
 // Preferido: ADB Keyboard (aceita acentos). Alternativa: input text (só ASCII).
-async function insertText(text, { serial = process.env.ADB_SERIAL, run = runAdb, clear = false } = {}) {
+async function insertText(text, { serial = process.env.ADB_SERIAL, run = runAdb, clear = false, wait = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
   if (!text || !text.trim()) return fail("empty", "Não há texto para inserir.");
   const sh = (...args) => run(["shell", ...args], { serial });
 
@@ -27,9 +27,14 @@ async function insertText(text, { serial = process.env.ADB_SERIAL, run = runAdb,
     const prev = (await sh("settings", "get", "secure", "default_input_method")).stdout.trim();
     await sh("ime", "enable", ADB_KEYBOARD_IME);
     await sh("ime", "set", ADB_KEYBOARD_IME);
-    if (clear) await sh("am", "broadcast", "-a", "ADB_CLEAR_TEXT");
+    await wait(700);
+    if (clear) {
+      await sh("am", "broadcast", "-a", "ADB_CLEAR_TEXT");
+      await wait(200);
+    }
     const b64 = Buffer.from(text, "utf8").toString("base64");
     const r = await sh("am", "broadcast", "-a", "ADB_INPUT_B64", "--es", "msg", b64);
+    await wait(300);
     if (prev && prev !== "null" && prev !== ADB_KEYBOARD_IME) await sh("ime", "set", prev);
     if (!r.ok) return fail("adb", "Falhou ao enviar o texto ao telemóvel.");
     return { ok: true, method: "adbkeyboard" };

@@ -47,7 +47,13 @@ async function insertForQuestion(question, text, { readScreen, insertText, run =
   if (!tap.ok) return { ok: false, code: "adb", error: "Não consegui tocar no ecrã do telemóvel." };
   await wait(500);
   const r = await insertText(text, { clear: true });
-  return r.ok ? { ...r, targeted: true } : r;
+  if (!r.ok) return r;
+  await wait(600);
+  const after = await readScreen();
+  const probe = text.trim().slice(0, 25);
+  const ok = after.ok && after.nodes.some((n) => n.editable && n.text.includes(probe));
+  if (!ok) return { ok: false, code: "not_confirmed", error: "Enviei o texto, mas não o vejo na caixa de resposta do telemóvel. Confirme que o ADB Keyboard está ativo e tente de novo." };
+  return { ...r, targeted: true, verified: true };
 }
 
 module.exports = { locateField, insertForQuestion };

@@ -31,7 +31,7 @@ async function generate(prompt, { fetchImpl = fetch } = {}) {
         "Api-Revision": API_REVISION,
       },
       body: JSON.stringify({ model, input: prompt }),
-      signal: AbortSignal.timeout(120000),
+      signal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS) || 120000),
     });
   } catch (e) {
     if (e.name === "TimeoutError" || e.name === "AbortError") throw new AppError("timeout");
