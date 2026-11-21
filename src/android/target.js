@@ -46,7 +46,7 @@ async function insertForQuestion(question, text, { readScreen, insertText, run =
   const tap = await run(["shell", "input", "tap", String(loc.x), String(loc.y)], { serial });
   if (!tap.ok) return { ok: false, code: "adb", error: "Não consegui tocar no ecrã do telemóvel." };
   await wait(500);
-  const r = await insertText(text);
+  const r = await insertText(text, { clear: true });
   return r.ok ? { ...r, targeted: true } : r;
 }
 

@@ -42,6 +42,9 @@ test("inserir: ADB Keyboard (acentos) restaura o teclado; sem ele só ASCII", as
   assert.equal(calls[calls.length - 1], "shell ime set com.x/.Y");
 
   const noKb = async () => ({ ok: true, stdout: "com.x/.Y\n" });
+  calls.length = 0;
+  await insertText("Olá", { run: withKb, clear: true });
+  assert.ok(calls.findIndex((c) => c.includes("ADB_CLEAR_TEXT")) < calls.findIndex((c) => c.includes("ADB_INPUT_B64")));
   assert.equal((await insertText("Olá", { run: noKb })).code, "needs_adbkeyboard");
   assert.equal((await insertText("hello world", { run: noKb })).method, "input");
   assert.equal(escapeForInputText("a b&c"), "a%sb\\&c");
