@@ -1,0 +1,17 @@
+.loader {
+  display: flex;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+.loader input {
+  flex: 1;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--s3);
+  font: inherit;
+}
+.article-title {
+  margin-top: var(--s3);
+  font-weight: 600;
+}

@@ -1,0 +1,32 @@
+.btn {
+  height: 36px;
+  padding: 0 var(--s4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.btn.ghost {
+  border-color: transparent;
+  color: var(--muted);
+  background: transparent;
+}
+
+.btn {
+  white-space: nowrap;
+}
+
+.btn.sm {
+  height: 30px;
+  padding: 0 var(--s3);
+  font-size: 13px;
+}

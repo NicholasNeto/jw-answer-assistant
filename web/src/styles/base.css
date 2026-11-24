@@ -1,0 +1,17 @@
+/* Utilitários globais partilhados por vários componentes. */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s4);
+}
+
+.card h2 {
+  margin: 0 0 var(--s3);
+  font-size: 16px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
